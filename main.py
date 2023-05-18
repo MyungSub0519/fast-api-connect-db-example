@@ -1,30 +1,44 @@
-from typing import Union
 from fastapi import FastAPI
-from fastapi_sqlalchemy import DBSessionMiddleware
-from fastapi_sqlalchemy import db
-from sqlalchemy import text
-import os 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-HOSTNAME = os.getenv("HOSTNAME")
-PORT = os.getenv("PORT")
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
-DBNAME = os.getenv("DBNAME")    
-
-MYSQL_URL = f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOSTNAME}:{PORT}/{DBNAME}'
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 app = FastAPI()
 
-app.add_middleware(DBSessionMiddleware, db_url=MYSQL_URL)
+# MySQL 연결 설정
+mysql_config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '0000',
+    'database': 'testdb',
+    'port' : 3306
+}
+
+# SQLAlchemy 엔진 생성
+engine = create_engine(f"mysql+mysqlconnector://{mysql_config['user']}:{mysql_config['password']}@{mysql_config['host']}:{mysql_config['port']}/{mysql_config['database']}")
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+
+# 사용자 모델 정의
+class User(Base):
+    __tablename__ = "test"
+    a = Column(String(255), primary_key=True, index=True)
+    b = Column(String(255))
+
+# 테이블 생성
+Base.metadata.create_all(bind=engine)
+
 
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+async def root():
+    return {"message": "Hello, World!"}
 
-@app.get('/worker')
-async def select_worker():
-    query = db.session.query(text('SELECT * FROM test'))
-    return query.all()
+
+@app.get("/users")
+async def get_users():
+    db = SessionLocal()
+    users = db.query(User).all()
+    db.close()
+    return {"users": users}
