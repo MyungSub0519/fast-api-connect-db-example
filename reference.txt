@@ -1,1 +1,0 @@
-https://velog.io/@insutance/fastapi-connect-mysql-mongodb
